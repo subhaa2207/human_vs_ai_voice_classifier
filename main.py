@@ -68,15 +68,21 @@ def analyze_audio(audio_bytes):
 
 @app.post("/api/voice-detection")
 async def detect_voice(request: DetectionRequest, x_api_key: str = Header(None)):
-    # Validate API Key
     if x_api_key != EXPECTED_API_KEY:
-        raise HTTPException(status_code=403, detail="Invalid API key or malformed request")
+        raise HTTPException(status_code=403, detail="Invalid API key")
     
     try:
-        # Decode Base64 string to audio bytes
-        audio_bytes = base64.b64decode(request.audioBase64)
+        # 1. Get the string from the request
+        audio_str = request.audioBase64
         
-        # Perform inference
+        # 2. AUTO-PADDING FIX: Ensure the string length is a multiple of 4
+        missing_padding = len(audio_str) % 4
+        if missing_padding:
+            audio_str += '=' * (4 - missing_padding)
+            
+        # 3. Decode the safely padded string
+        audio_bytes = base64.b64decode(audio_str)
+
         classification, confidence, explanation = analyze_audio(audio_bytes)
         
         return {
@@ -87,6 +93,7 @@ async def detect_voice(request: DetectionRequest, x_api_key: str = Header(None))
             "explanation": explanation
         }
     except Exception as e:
+        # Return the specific error message to help with debugging
         return {"status": "error", "message": f"Inference failed: {str(e)}"}
 
 # Health check for Render to verify service status
@@ -99,3 +106,4 @@ if __name__ == "__main__":
     # Render assigns a dynamic port via the PORT environment variable
     port = int(os.environ.get("PORT", 10000))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
