@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+torch --extra-index-url https://download.pytorch.org/whl/cpu
+librosa
+transformers
+python-multipart
